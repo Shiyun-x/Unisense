@@ -1,0 +1,509 @@
+# MoE LoRA FFN 配置文件 — Qwen3.5-9B 专用
+#
+#   MOE_ARGS=$(python3 scripts/moe_args.py --config scripts/moe_config_9B.yaml --preset pc_full_attention_only)
+#   torchrun ... $MOE_ARGS
+#
+active_preset: full_attention_only
+
+presets:
+
+  # 关闭 MoE
+  disabled:
+    moe_enable: false
+
+  # Shared Dense FFN LoRA — MSC ablation baseline (no modality routing).
+  # Same full-attn groups / rank / proj_mode as full_attention_only MSC;
+  # installs SharedDenseFFN (single GateUpDownExpert on all tokens).
+  shared_dense:
+    moe_enable: true
+    moe_shared_dense: true
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "none"
+    moe_balance_loss_weight: 0.0
+    moe_diversity_loss_weight: 0.0
+
+  # One router and three low-rank experts shared by all added modalities.
+  # Group 7 / layer 31 is intentionally omitted: a modality-only residual in
+  # the final decoder layer cannot reach a later supervised text token.
+  shared_pool_3:
+    moe_enable: true
+    moe_shared_pool: true
+    moe_shared_dense: false
+    moe_modal_list: "depth,pointcloud,imu,radar,thermal,tactile,motion,smell"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+
+  # ────────────────────────────────────────────────────────────────────
+  # Depth presets
+  # ────────────────────────────────────────────────────────────────────
+
+  # top_standard: groups 0,1,2,3 → layers 3,7,11,15（前 4 组）
+  top_standard:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  # standard: groups 3,4,5 → layers 15,19,23
+  standard:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # bottom_4: groups 4,5,6,7 → layers 19,23,27,31（最后 4 组 full attention）
+  bottom_4:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  # bottom_standard: groups 5,6,7 → layers 23,27,31（下半段）
+  bottom_standard:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # full_attention_only: 全部 8 组 → layers 3,7,11,15,19,23,27,31
+  full_attention_only:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  # middle_standard: groups 2,3,4,5 → layers 11,15,19,23（中间 4 组）
+  middle_standard:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "2,3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # all: 全部 8 组所有层（含 linear attention），共 32 层
+  all:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: false
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # Depth FFN-position ablations against the completed main experiment, which
+  # patches all full-attention FFNs.  The `all` ablation patches every decoder
+  # FFN; the half variants patch only the full-attention FFNs in the front or
+  # back half.  The MoE surgery intentionally drops the final modality-only
+  # layer (31), whose residual cannot reach a later supervised text token.
+  depth_ffn_all:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: false
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  depth_ffn_front_half:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  depth_ffn_back_half:
+    moe_enable: true
+    moe_modal_list: "depth"
+    moe_num_experts: 3
+    moe_group_indices: "4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 500
+
+  # ────────────────────────────────────────────────────────────────────
+  # Point Cloud presets
+  # ────────────────────────────────────────────────────────────────────
+
+  pc_standard:
+    moe_enable: true
+    moe_modal_list: "pointcloud"
+    moe_num_experts: 3
+    moe_group_indices: "3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  pc_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "pointcloud"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # Same topology as pc_full_attention_only, but all optimization after the
+  # stage-1 alignment boundary is driven strictly by the main SFT CE loss.
+  pc_full_attention_only_ce:
+    moe_enable: true
+    moe_modal_list: "pointcloud"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "none"
+    moe_balance_loss_weight: 0.0
+    moe_diversity_loss_weight: 0.0
+    moe_diversity_warmup_steps: 0
+
+  # pc_top_standard: groups 0,1,2,3 → layers 3,7,11,15（前 4 组 full attention）
+  pc_top_standard:
+    moe_enable: true
+    moe_modal_list: "pointcloud"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # IMU presets
+  # ────────────────────────────────────────────────────────────────────
+
+  # imu_top_standard_sz0001: groups 0,1,2 → layers 3,7,11
+  imu_top_standard_sz0001:
+    moe_enable: true
+    moe_modal_list: "imu"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # imu_standard: groups 3,4,5 → layers 15,19,23
+  imu_standard:
+    moe_enable: true
+    moe_modal_list: "imu"
+    moe_num_experts: 3
+    moe_group_indices: "3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # imu_middle_standard: groups 2,3,4,5 → layers 11,15,19,23
+  imu_middle_standard:
+    moe_enable: true
+    moe_modal_list: "imu"
+    moe_num_experts: 3
+    moe_group_indices: "2,3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # imu_bottom_standard: groups 5,6,7 → layers 23,27,31
+  imu_bottom_standard:
+    moe_enable: true
+    moe_modal_list: "imu"
+    moe_num_experts: 3
+    moe_group_indices: "5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  # imu_full_attention_only: 全部 8 组 → layers 3,7,11,15,19,23,27,31
+  imu_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "imu"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # Tactile presets
+  # ────────────────────────────────────────────────────────────────────
+
+  tactile_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "tactile"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # Thermal presets
+  # ────────────────────────────────────────────────────────────────────
+
+  thermal_top_standard:
+    moe_enable: true
+    moe_modal_list: "thermal"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  thermal_standard:
+    moe_enable: true
+    moe_modal_list: "thermal"
+    moe_num_experts: 3
+    moe_group_indices: "3,4,5"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.05
+    moe_diversity_warmup_steps: 800
+
+  thermal_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "thermal"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # Smell (multichannel gas sensor) presets
+  # ────────────────────────────────────────────────────────────────────
+
+  # smell_full_attention_only: 全部 8 组 → layers 3,7,11,15,19,23,27,31
+  #   定长 (T,C) 气体传感器时序，与 imu/radar/motion 对称
+  smell_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "smell"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # Radar (mmWave) presets
+  # ────────────────────────────────────────────────────────────────────
+
+  radar_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "radar"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # Radar FFN-position ablations.  These mirror the depth ablations while
+  # preserving radar_full_attention_only's expert and auxiliary-loss settings.
+  radar_ffn_all:
+    moe_enable: true
+    moe_modal_list: "radar"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: false
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  radar_ffn_front_half:
+    moe_enable: true
+    moe_modal_list: "radar"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  radar_ffn_back_half:
+    moe_enable: true
+    moe_modal_list: "radar"
+    moe_num_experts: 3
+    moe_group_indices: "4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
+
+  # ────────────────────────────────────────────────────────────────────
+  # Motion (skeleton trajectory, QuAnTS) presets
+  # ────────────────────────────────────────────────────────────────────
+
+  # motion_full_attention_only: 全部 8 组 → layers 3,7,11,15,19,23,27,31
+  #   定长 (320,24,3) 骨骼轨迹时序，与 imu/radar 对称
+  motion_full_attention_only:
+    moe_enable: true
+    moe_modal_list: "motion"
+    moe_num_experts: 3
+    moe_group_indices: "0,1,2,3,4,5,6,7"
+    moe_full_attn_only: true
+    moe_proj_mode: "gate_up_down"
+    moe_lora_r: 32
+    moe_lora_alpha: 64
+    moe_balance_loss_type: "switch+z_loss"
+    moe_balance_loss_weight: 0.001
+    moe_diversity_loss_weight: 0.07
+    moe_diversity_warmup_steps: 600
