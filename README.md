@@ -78,7 +78,6 @@ Place instruction annotations in `data/`, sensor files in `dataset/`, and model 
 
 ```text
 Unisense/
-├── assets/                          # Project figures
 ├── unisense/                        # Model, preprocessing, and trainer
 ├── scripts/                         # MoE and DeepSpeed configurations
 │   └── train/
@@ -141,10 +140,19 @@ Evaluation code, benchmark data, and detailed results for embodied sensory under
 
 ## Citation
 
-The paper link and BibTeX entry will be added when available.
+If you find this work useful, please cite our [paper](https://arxiv.org/abs/2610.26751):
+
+```bibtex
+@article{xiong2026beyond,
+  title   = {Beyond Omni: A Unified MLLM for Embodied Sensory Understanding},
+  author  = {Xiong, Shiyun and Wu, Dongming and Sun, Peiwen and Yang, Bokang and Wang, Jiaxu and Sun, Xiaolou and Wen, Mingxing and Yue, Xiangyu},
+  journal = {arXiv preprint arXiv:2610.26751},
+  year    = {2026}
+}
+```
 
 <p align="center">
   <a href="#"><strong>↑ Back to top</strong></a>
 </p>
 
-<!-- TODO: Add paper / project-page URLs to the header and BibTeX to Citation. -->
+<!-- TODO: Add paper / project-page URLs to the header. -->
