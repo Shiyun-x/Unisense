@@ -5,8 +5,8 @@
 <br>
 
 <!-- [![Project Page](https://img.shields.io/badge/Project_Page-Pending-4183c4)](#abstract) -->
-<!-- [![arXiv](https://img.shields.io/badge/arXiv-Pending-b31b1b)](#citation)
-![UniSense-1M Dataset: Coming soon](https://img.shields.io/badge/%F0%9F%A4%97_UniSense--1M_Dataset-Coming_soon-5b9a8b)
+!-- [![arXiv](https://img.shields.io/badge/arXiv-Pending-b31b1b)](#citation)
+<!--[UniSense-1M Dataset: Coming soon](https://img.shields.io/badge/%F0%9F%A4%97_UniSense--1M_Dataset-Coming_soon-5b9a8b)
 ![UniSense Models: Coming soon](https://img.shields.io/badge/%F0%9F%93%A6_UniSense_Models-Coming_soon-ffd21e) -->
 
 **A unified multimodal language model for understanding the physical world through embodied senses.**
